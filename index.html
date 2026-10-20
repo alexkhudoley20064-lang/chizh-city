@@ -285,12 +285,13 @@
       pointer-events: none;
     }
 
+    /* Стили изображения ЧижикСкай */
     .building-img {
       width: 48px;
       height: 48px;
       object-fit: contain;
       pointer-events: none;
-      mix-blend-mode: multiply;
+      mix-blend-mode: multiply; /* Мягко растворяет белый фон */
       filter: contrast(1.15) brightness(0.95);
       display: block;
     }
@@ -567,7 +568,6 @@
       margin-bottom: 6px;
     }
 
-    /* Модальное окно Лидерборда */
     .leaderboard-title {
       font-size: 1.4rem;
       font-weight: 900;
@@ -673,7 +673,7 @@
 
       <p class="instructions">
         Эволюционируйте от Стройки 🏗️ до ЧижикСкай 
-        <img class="inline-chizhik" src="chizhik.png" alt="ЧижикСкай" onerror="this.outerHTML='🏙️🐥'">
+        <img class="inline-chizhik" src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижикСкай">
       </p>
 
       <div class="score-board">
@@ -711,12 +711,12 @@
     </div>
   </div>
 
-  <!-- Окно победы -->
+  <!-- Модальное окно победы -->
   <div class="modal-overlay" id="winModal">
     <div class="modal-card modal-win-card">
       <div class="win-crown">👑</div>
       <div class="win-hero-container">
-        <img src="chizhik.png" alt="ЧижикСкай" onerror="this.src=''; this.alt='🏙️🐥';">
+        <img src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижикСкай">
       </div>
       <h2 class="win-title">ТРИУМФ!</h2>
       <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px;">
@@ -737,7 +737,7 @@
     </div>
   </div>
 
-  <!-- Окно поражения -->
+  <!-- Модальное окно поражения -->
   <div class="modal-overlay" id="loseModal">
     <div class="modal-card">
       <div style="font-size: 3.2rem; margin-bottom: 6px;">💥</div>
@@ -772,6 +772,8 @@
   <div id="dragGhost" class="drag-ghost" style="display: none;"></div>
 
   <script>
+    const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
+
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
@@ -790,7 +792,7 @@
       } catch (e) {}
     }
 
-    // ---------------- ЗВУКОВОЙ СИНТЕЗАТОР (Оригинальный мягкий "Бульк" на полной громкости) ----------------
+    // ---------------- ЗВУКИ (Web Audio API) ----------------
     let audioCtx = null;
     let masterGain = null;
     let compressor = null;
@@ -799,7 +801,6 @@
     function initAudio() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-
         compressor = audioCtx.createDynamicsCompressor();
         compressor.threshold.setValueAtTime(-10, audioCtx.currentTime);
         compressor.knee.setValueAtTime(25, audioCtx.currentTime);
@@ -818,7 +819,6 @@
       }
     }
 
-    // Восстановлен оригинальный чистый синусоидальный звук капли без низкобитного треска
     function playBubbleSound(level = 1) {
       if (isMuted) return;
       initAudio();
@@ -826,15 +826,14 @@
         const t = audioCtx.currentTime;
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-
         const baseFreq = 260 + Math.min(level, 9) * 45;
-        osc.type = 'sine'; // Чистая синусоида — глубокий, мягкий и сочный звук капли!
+        osc.type = 'sine'; // Чистая синусоида
 
         osc.frequency.setValueAtTime(baseFreq * 0.7, t);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.0, t + 0.08);
 
         gain.gain.setValueAtTime(0.01, t);
-        gain.gain.linearRampToValueAtTime(0.95, t + 0.02); // Полная громкость
+        gain.gain.linearRampToValueAtTime(0.95, t + 0.02);
         gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
 
         osc.connect(gain);
@@ -1171,7 +1170,7 @@
     function getBuildingHTML(level) {
       const item = TILES[level];
       if (item.isImage) {
-        return `<img class="building-img" src="chizhik.png" alt="ЧижикСкай" onerror="this.outerHTML='<span class=\\'building-emoji\\'>🏙️🐥</span>'">`;
+        return `<img class="building-img" src="${CHIZHIK_SKY_IMG_URL}" alt="ЧижикСкай">`;
       }
       return `<span class="building-emoji">${item.emoji}</span>`;
     }
@@ -1348,7 +1347,7 @@
         const sourceVal = getItemValByKey(from);
         const targetVal = getItemValByKey(to);
 
-        // 1. Слияние
+        // Слияние
         if (sourceVal === targetVal && sourceVal < MAX_LEVEL) {
           const nextLevel = sourceVal + 1;
           setItemValByKey(from, null);
@@ -1359,7 +1358,6 @@
             animationType = 'anim-merge';
           }
 
-          // Оригинальный чистый "Бульк"
           playBubbleSound(nextLevel);
           addScore(nextLevel);
 
@@ -1371,7 +1369,7 @@
             triggerHaptic('impact');
           }
 
-          // ПОБЕДА
+          // Победа
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
@@ -1383,7 +1381,7 @@
           }
           saveGame();
         } 
-        // 2. Перемещение
+        // Перемещение
         else if (targetVal === null) {
           setItemValByKey(to, sourceVal);
           setItemValByKey(from, null);
@@ -1407,7 +1405,6 @@
       const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
       const myName = tgUser?.first_name || 'Вы (Мэр)';
 
-      // Список топ-игроков города
       const leaderboardData = [
         { name: "Чижик-Мэр 🐥", score: 28500 },
         { name: "Александр VIP", score: 19400 },
@@ -1419,7 +1416,6 @@
         { name: "Ксения 🏰", score: 2300 }
       ];
 
-      // Сортировка по убыванию очков
       leaderboardData.sort((a, b) => b.score - a.score);
 
       leaderboardList.innerHTML = '';
