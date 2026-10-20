@@ -1,3 +1,31 @@
+Вот обновленный файл index.html со всеми нововведениями:
+
+Что добавлено:
+
+1.  Плашка с правилами и стартовое меню:
+      - Перед началом игры открывается стильное меню с краткими правилами и
+        полем для ввода никнейма.
+      - Таймер не тикает, пока вы находитесь в меню — можно спокойно прочитать
+        правила.
+2.  Лидерборд открывается только до начала игры:
+      - Таблицу рекордов можно изучить прямо из стартового меню. Пока открыт
+        лидерборд, игра не начнется.
+      - Как только вы нажимаете «🚀 Начать игру», кнопка лидерборда в шапке
+        скрывается, чтобы во время раунда не отвлекаться от таймера.
+3.  Новый список лидеров:
+    1.  Владимир_носков — 28 400
+    2.  Дмитрий 67 — 19 800
+    3.  Елизавета паркет — 14 300
+    4.  Андрей лимонное пиво — 9 700
+    5.  Президент какашек — 5 200 (Ваш персонаж динамически соревнуется с ними и
+        поднимается в топе по мере набора очков!)
+4.  Свой никнейм:
+      - Игрок может ввести любой ник (по умолчанию подтягивается имя из
+        Telegram). Ник сохраняется в памяти устройства и сразу отображается в
+        таблице лидеров.
+
+Полный код index.html:
+
 <!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -285,13 +313,12 @@
       pointer-events: none;
     }
 
-    /* Стили изображения ЧижикСкай */
     .building-img {
       width: 48px;
       height: 48px;
       object-fit: contain;
       pointer-events: none;
-      mix-blend-mode: multiply; /* Мягко растворяет белый фон */
+      mix-blend-mode: multiply;
       filter: contrast(1.15) brightness(0.95);
       display: block;
     }
@@ -473,7 +500,7 @@
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 7, 69, 0.92);
+      background: rgba(0, 7, 69, 0.94);
       backdrop-filter: blur(6px);
       display: none;
       align-items: center;
@@ -491,6 +518,61 @@
       max-width: 320px;
       border: 1px solid rgba(159, 177, 252, 0.2);
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
+    }
+
+    /* Стартовая плашка с правилами */
+    .rules-list {
+      text-align: left;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin: 14px 0 16px 0;
+      background: rgba(0, 0, 0, 0.25);
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(159, 177, 252, 0.15);
+    }
+
+    .rules-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      line-height: 1.3;
+    }
+
+    .nickname-container {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      margin-bottom: 14px;
+      width: 100%;
+    }
+
+    .nickname-container label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: #9FB1FC;
+      text-transform: uppercase;
+    }
+
+    .nickname-input {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(159, 177, 252, 0.3);
+      background: #061157;
+      color: #fff;
+      font-size: 0.95rem;
+      font-weight: 800;
+      outline: none;
+      transition: border-color 0.2s ease;
+    }
+
+    .nickname-input:focus {
+      border-color: var(--primary);
     }
 
     .modal-win-card {
@@ -706,12 +788,43 @@
       </div>
       <div class="action-buttons">
         <button class="btn-spawn" id="btnSpawn">Построить 🏗️</button>
-        <button class="btn-restart" id="btnReset">🔄 Начать заново</button>
+        <button class="btn-restart" id="btnReset">🔄 В меню</button>
       </div>
     </div>
   </div>
 
-  <!-- Модальное окно победы -->
+  <!-- Плашка перед началом игры: Правила и Никнейм -->
+  <div class="modal-overlay" id="startModal" style="display: flex;">
+    <div class="modal-card">
+      <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">Chizhik City 🏙️</h2>
+      <p style="font-size: 0.82rem; color: #9FB1FC;">Добро пожаловать, будущий Мэр!</p>
+
+      <div class="rules-list">
+        <div class="rules-item">
+          <span>🏗️</span>
+          <span><b>Объединяйте</b> одинаковые здания перетаскиванием, чтобы построить небоскрёб ЧижикСкай.</span>
+        </div>
+        <div class="rules-item">
+          <span>📦</span>
+          <span><b>Склад</b> — перетащите дом в карман снизу, чтобы временно освободить клетку на поле.</span>
+        </div>
+        <div class="rules-item">
+          <span>⚠️</span>
+          <span><b>Таймер</b> — не давайте полю полностью заполниться к моменту появления нового здания!</span>
+        </div>
+      </div>
+
+      <div class="nickname-container">
+        <label for="nicknameInput">Ваш никнейм в игре:</label>
+        <input type="text" id="nicknameInput" class="nickname-input" maxlength="16" placeholder="Введите имя...">
+      </div>
+
+      <button class="btn-win-restart" id="btnStartGame" style="margin-bottom: 8px;">🚀 Начать игру</button>
+      <button class="btn-restart" id="btnMenuLeaderboard" style="width: 100%; height: 38px;">🏆 Таблица лидеров</button>
+    </div>
+  </div>
+
+  <!-- Окно победы -->
   <div class="modal-overlay" id="winModal">
     <div class="modal-card modal-win-card">
       <div class="win-crown">👑</div>
@@ -737,7 +850,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно поражения -->
+  <!-- Окно поражения -->
   <div class="modal-overlay" id="loseModal">
     <div class="modal-card">
       <div style="font-size: 3.2rem; margin-bottom: 6px;">💥</div>
@@ -765,7 +878,7 @@
     <div class="modal-card">
       <h2 class="leaderboard-title">🏆 Топ Мэров</h2>
       <div class="leaderboard-list" id="leaderboardList"></div>
-      <button class="btn-win-restart" id="btnCloseLeaderboard">Закрыть</button>
+      <button class="btn-win-restart" id="btnCloseLeaderboard">Назад</button>
     </div>
   </div>
 
@@ -792,7 +905,7 @@
       } catch (e) {}
     }
 
-    // ---------------- ЗВУКИ (Web Audio API) ----------------
+    // ---------------- ЗВУКИ ----------------
     let audioCtx = null;
     let masterGain = null;
     let compressor = null;
@@ -827,7 +940,7 @@
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         const baseFreq = 260 + Math.min(level, 9) * 45;
-        osc.type = 'sine'; // Чистая синусоида
+        osc.type = 'sine';
 
         osc.frequency.setValueAtTime(baseFreq * 0.7, t);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.0, t + 0.08);
@@ -1051,10 +1164,12 @@
     let animatedIndex = null;
     let animationType = null;
 
+    let isGameStarted = false; // Игра не начнется, пока открыто меню!
+    let isGameOver = false;
+
     let isDragging = false;
     let dragSourceKey = null;
     let currentHoverKey = null;
-    let isGameOver = false;
 
     let comboMultiplier = 1;
     let lastMergeTime = 0;
@@ -1068,6 +1183,7 @@
     let spawnTimer = 0;
     let lastTimestamp = performance.now();
 
+    // Элементы интерфейса
     const gridEl = document.getElementById('grid');
     const warehouseSlotEl = document.getElementById('warehouseSlot');
     const timerBarEl = document.getElementById('timerBar');
@@ -1091,10 +1207,36 @@
     const toastName = document.getElementById('toastName');
     let toastTimeout = null;
 
+    const startModal = document.getElementById('startModal');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const btnMenuLeaderboard = document.getElementById('btnMenuLeaderboard');
+    const nicknameInput = document.getElementById('nicknameInput');
+
     const btnLeaderboard = document.getElementById('btnLeaderboard');
     const leaderboardModal = document.getElementById('leaderboardModal');
     const btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
     const leaderboardList = document.getElementById('leaderboardList');
+
+    // Определение и сохранение ника
+    function getPlayerNickname() {
+      let saved = localStorage.getItem('chizhik_player_nickname');
+      if (!saved) {
+        const tgName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name;
+        saved = tgName || 'Мэр Чижика';
+      }
+      return saved;
+    }
+
+    function setPlayerNickname(name) {
+      const clean = name.trim() || 'Мэр Чижика';
+      localStorage.setItem('chizhik_player_nickname', clean);
+      return clean;
+    }
+
+    nicknameInput.value = getPlayerNickname();
+    nicknameInput.addEventListener('change', () => {
+      setPlayerNickname(nicknameInput.value);
+    });
 
     function saveGame() {
       try {
@@ -1270,7 +1412,7 @@
     }
 
     function onPointerDownUnified(e) {
-      if (isGameOver) return;
+      if (!isGameStarted || isGameOver) return;
       initAudio();
       const cell = e.target.closest('.cell');
       if (!cell) return;
@@ -1375,6 +1517,7 @@
             triggerHaptic('success');
             playVictorySound();
             startVictoryConfetti();
+            btnLeaderboard.style.display = 'flex'; // возвращаем кнопку лидерборда после игры
             document.getElementById('winFinalScore').textContent = score.toLocaleString();
             document.getElementById('winHighScore').textContent = highScore.toLocaleString();
             setTimeout(() => { winModal.style.display = 'flex'; }, 350);
@@ -1402,18 +1545,16 @@
     // ---------------- ЛИДЕРБОРД ----------------
     function openLeaderboard() {
       initAudio();
-      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
-      const myName = tgUser?.first_name || 'Вы (Мэр)';
+      const myName = setPlayerNickname(nicknameInput.value);
 
+      // Заданные боты
       const leaderboardData = [
-        { name: "Чижик-Мэр 🐥", score: 28500 },
-        { name: "Александр VIP", score: 19400 },
-        { name: "Мария Скай", score: 14200 },
-        { name: myName, score: Math.max(score, highScore), isMe: true },
-        { name: "Макс Архитектор", score: 9800 },
-        { name: "Елена_Дом", score: 6500 },
-        { name: "Даниил Т.", score: 4100 },
-        { name: "Ксения 🏰", score: 2300 }
+        { name: "Владимир_носков", score: 28400 },
+        { name: "Дмитрий 67", score: 19800 },
+        { name: "Елизавета паркет", score: 14300 },
+        { name: "Андрей лимонное пиво", score: 9700 },
+        { name: "Президент какашек", score: 5200 },
+        { name: myName, score: Math.max(score, highScore), isMe: true }
       ];
 
       leaderboardData.sort((a, b) => b.score - a.score);
@@ -1440,15 +1581,46 @@
       leaderboardModal.style.display = 'flex';
     }
 
-    btnLeaderboard.addEventListener('pointerdown', (e) => {
+    // Лидерборд из меню
+    btnMenuLeaderboard.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       openLeaderboard();
+    });
+
+    // Кнопка в шапке доступна только ДО начала игры
+    btnLeaderboard.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      if (!isGameStarted) {
+        openLeaderboard();
+      }
     });
 
     btnCloseLeaderboard.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       leaderboardModal.style.display = 'none';
     });
+
+    // ---------------- СТАРТ ИГРЫ ----------------
+    function startGameSession() {
+      initAudio();
+      setPlayerNickname(nicknameInput.value);
+      isGameStarted = true;
+      startModal.style.display = 'none';
+      btnLeaderboard.style.display = 'none'; // Скрываем кнопку лидерборда во время игры!
+      lastTimestamp = performance.now();
+    }
+
+    btnStartGame.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      startGameSession();
+    });
+
+    function showStartMenu() {
+      isGameStarted = false;
+      btnLeaderboard.style.display = 'flex';
+      startModal.style.display = 'flex';
+      nicknameInput.value = getPlayerNickname();
+    }
 
     // ---------------- ИГРОВОЙ ЦИКЛ ----------------
     function initGame(forceReset = false) {
@@ -1479,13 +1651,17 @@
       spawnTile();
       render();
       saveGame();
+
+      // Показываем меню правил перед стартом
+      showStartMenu();
     }
 
     function gameLoop(now) {
       const delta = now - lastTimestamp;
       lastTimestamp = now;
 
-      if (!isGameOver) {
+      // Таймер тикает ТОЛЬКО когда игра начата!
+      if (isGameStarted && !isGameOver) {
         spawnTimer += delta;
         const emptyCellsCount = getEmptyIndices().length;
 
@@ -1504,6 +1680,7 @@
             isGameOver = true;
             triggerHaptic('error');
             playDefeatSound();
+            btnLeaderboard.style.display = 'flex'; // возвращаем кнопку лидерборда после игры
             document.getElementById('loseFinalScore').textContent = score.toLocaleString();
             document.getElementById('loseHighScore').textContent = highScore.toLocaleString();
             loseModal.style.display = 'flex';
@@ -1521,8 +1698,9 @@
     }
 
     function shareScore() {
+      const myName = getPlayerNickname();
       const text = encodeURIComponent(
-        `🏙️ Я построил ЧижикСкай и набрал ${score.toLocaleString()} очков в Chizhik City! 🎮 Попробуй побить мой рекорд!`
+        `🏙️ Мэр ${myName} построил ЧижикСкай и набрал ${score.toLocaleString()} очков в Chizhik City! 🎮 Сможешь побить мой рекорд?`
       );
       const shareUrl = `https://t.me/share/url?text=${text}`;
 
@@ -1536,7 +1714,7 @@
     btnSpawn.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       initAudio();
-      if (isGameOver) return;
+      if (!isGameStarted || isGameOver) return;
       if (spawnTile()) {
         spawnTimer = 0;
         triggerHaptic('impact');
@@ -1549,7 +1727,7 @@
     btnReset.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       initAudio();
-      if (confirm('Начать новую игру? Прогресс поля будет сброшен.')) {
+      if (confirm('Выйти в главное меню? Текущий раунд будет сброшен.')) {
         initGame(true);
       }
     });
