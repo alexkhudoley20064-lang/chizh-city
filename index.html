@@ -29,6 +29,15 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
+    /* Блокировка резиновой прокрутки и случайных свайпов */
+    html, body {
+      overscroll-behavior: none;
+      overflow: hidden;
+      touch-action: none;
+      width: 100%;
+      height: 100%;
+    }
+
     body {
       background-color: var(--bg);
       color: var(--text);
@@ -39,8 +48,6 @@
       justify-content: flex-start;
       padding: 12px 16px;
       padding-top: max(16px, env(safe-area-inset-top));
-      overflow: hidden;
-      touch-action: none;
       position: relative;
     }
 
@@ -492,7 +499,7 @@
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
     }
 
-    /* Стартовая плашка с правилами */
+    /* Стартовое меню с правилами */
     .rules-list {
       text-align: left;
       font-size: 0.82rem;
@@ -845,7 +852,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно Лидерборда -->
+  <!-- Окно Лидерборда -->
   <div class="modal-overlay" id="leaderboardModal">
     <div class="modal-card">
       <h2 class="leaderboard-title">🏆 Топ Мэров</h2>
@@ -859,9 +866,14 @@
   <script>
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
 
+    // Инициализация Telegram WebApp API с защитой от случайного сворачивания
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
+      // Запрещаем сворачивание игры вертикальным свайпом по полю:
+      if (window.Telegram.WebApp.disableVerticalSwipes) {
+        window.Telegram.WebApp.disableVerticalSwipes();
+      }
     }
 
     function triggerHaptic(type = 'impact') {
@@ -1136,7 +1148,7 @@
     let animatedIndex = null;
     let animationType = null;
 
-    let isGameStarted = false; // Игра не начнется, пока открыто меню!
+    let isGameStarted = false;
     let isGameOver = false;
 
     let isDragging = false;
@@ -1155,7 +1167,6 @@
     let spawnTimer = 0;
     let lastTimestamp = performance.now();
 
-    // Элементы интерфейса
     const gridEl = document.getElementById('grid');
     const warehouseSlotEl = document.getElementById('warehouseSlot');
     const timerBarEl = document.getElementById('timerBar');
@@ -1189,7 +1200,6 @@
     const btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
     const leaderboardList = document.getElementById('leaderboardList');
 
-    // Определение и сохранение ника
     function getPlayerNickname() {
       let saved = localStorage.getItem('chizhik_player_nickname');
       if (!saved) {
@@ -1461,7 +1471,6 @@
         const sourceVal = getItemValByKey(from);
         const targetVal = getItemValByKey(to);
 
-        // Слияние
         if (sourceVal === targetVal && sourceVal < MAX_LEVEL) {
           const nextLevel = sourceVal + 1;
           setItemValByKey(from, null);
@@ -1483,20 +1492,18 @@
             triggerHaptic('impact');
           }
 
-          // Победа
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
             playVictorySound();
             startVictoryConfetti();
-            btnLeaderboard.style.display = 'flex'; // возвращаем кнопку лидерборда после игры
+            btnLeaderboard.style.display = 'flex';
             document.getElementById('winFinalScore').textContent = score.toLocaleString();
             document.getElementById('winHighScore').textContent = highScore.toLocaleString();
             setTimeout(() => { winModal.style.display = 'flex'; }, 350);
           }
           saveGame();
         } 
-        // Перемещение
         else if (targetVal === null) {
           setItemValByKey(to, sourceVal);
           setItemValByKey(from, null);
@@ -1519,7 +1526,6 @@
       initAudio();
       const myName = setPlayerNickname(nicknameInput.value);
 
-      // Заданные боты
       const leaderboardData = [
         { name: "Владимир_носков", score: 28400 },
         { name: "Дмитрий 67", score: 19800 },
@@ -1553,13 +1559,11 @@
       leaderboardModal.style.display = 'flex';
     }
 
-    // Лидерборд из меню
     btnMenuLeaderboard.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       openLeaderboard();
     });
 
-    // Кнопка в шапке доступна только ДО начала игры
     btnLeaderboard.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       if (!isGameStarted) {
@@ -1578,7 +1582,7 @@
       setPlayerNickname(nicknameInput.value);
       isGameStarted = true;
       startModal.style.display = 'none';
-      btnLeaderboard.style.display = 'none'; // Скрываем кнопку лидерборда во время игры!
+      btnLeaderboard.style.display = 'none';
       lastTimestamp = performance.now();
     }
 
@@ -1624,7 +1628,6 @@
       render();
       saveGame();
 
-      // Показываем меню правил перед стартом
       showStartMenu();
     }
 
@@ -1632,7 +1635,6 @@
       const delta = now - lastTimestamp;
       lastTimestamp = now;
 
-      // Таймер тикает ТОЛЬКО когда игра начата!
       if (isGameStarted && !isGameOver) {
         spawnTimer += delta;
         const emptyCellsCount = getEmptyIndices().length;
@@ -1652,7 +1654,7 @@
             isGameOver = true;
             triggerHaptic('error');
             playDefeatSound();
-            btnLeaderboard.style.display = 'flex'; // возвращаем кнопку лидерборда после игры
+            btnLeaderboard.style.display = 'flex';
             document.getElementById('loseFinalScore').textContent = score.toLocaleString();
             document.getElementById('loseHighScore').textContent = highScore.toLocaleString();
             loseModal.style.display = 'flex';
