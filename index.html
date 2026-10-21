@@ -29,7 +29,6 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* Блокировка резиновой прокрутки и случайных свайпов */
     html, body {
       overscroll-behavior: none;
       overflow: hidden;
@@ -233,7 +232,6 @@
       to { opacity: 1; }
     }
 
-    /* Сетка 3х3 */
     .grid {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
@@ -316,7 +314,6 @@
       pointer-events: none;
     }
 
-    /* Нижняя панель */
     .bottom-panel {
       display: flex;
       align-items: center;
@@ -475,7 +472,6 @@
       to { transform: translateY(-4px) scale(1.1); }
     }
 
-    /* Модальные окна */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -499,7 +495,6 @@
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7);
     }
 
-    /* Стартовое меню с правилами */
     .rules-list {
       text-align: left;
       font-size: 0.82rem;
@@ -772,7 +767,7 @@
     </div>
   </div>
 
-  <!-- Плашка перед началом игры: Правила и Никнейм -->
+  <!-- Стартовое меню с правилами -->
   <div class="modal-overlay" id="startModal" style="display: flex;">
     <div class="modal-card">
       <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">Chizhik City 🏙️</h2>
@@ -866,11 +861,9 @@
   <script>
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
 
-    // Инициализация Telegram WebApp API с защитой от случайного сворачивания
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
       window.Telegram.WebApp.expand();
-      // Запрещаем сворачивание игры вертикальным свайпом по полю:
       if (window.Telegram.WebApp.disableVerticalSwipes) {
         window.Telegram.WebApp.disableVerticalSwipes();
       }
@@ -1220,38 +1213,18 @@
       setPlayerNickname(nicknameInput.value);
     });
 
-    function saveGame() {
+    // Сохраняем ТОЛЬКО рекорд, чтобы доска не залипала при выходе!
+    function saveHighScoreOnly() {
       try {
-        const state = {
-          board,
-          warehouseItem,
-          score,
-          highScore,
-          unlockedLevels: Array.from(unlockedLevels),
-          spawnCount
-        };
-        localStorage.setItem('chizhik_city_save', JSON.stringify(state));
+        localStorage.setItem('chizhik_city_highscore', highScore.toString());
       } catch (e) {}
     }
 
-    function loadGame() {
+    function loadHighScoreOnly() {
       try {
-        const raw = localStorage.getItem('chizhik_city_save');
-        if (!raw) return false;
-        const data = JSON.parse(raw);
-
-        if (Array.isArray(data.board) && data.board.length === 9) {
-          board = data.board;
-          warehouseItem = data.warehouseItem || null;
-          score = data.score || 0;
-          highScore = data.highScore || 0;
-          unlockedLevels = new Set(data.unlockedLevels || [1]);
-          spawnCount = data.spawnCount || 0;
-          updateScoreUI();
-          return true;
-        }
+        highScore = parseInt(localStorage.getItem('chizhik_city_highscore') || '0', 10);
+        updateScoreUI();
       } catch (e) {}
-      return false;
     }
 
     function updateScoreUI() {
@@ -1274,6 +1247,7 @@
 
       if (score > highScore) {
         highScore = score;
+        saveHighScoreOnly();
       }
       updateScoreUI();
 
@@ -1344,7 +1318,6 @@
       board[randomIdx] = getNextSpawnLevel();
       animatedIndex = randomIdx;
       animationType = 'anim-spawn';
-      saveGame();
       return true;
     }
 
@@ -1492,6 +1465,7 @@
             triggerHaptic('impact');
           }
 
+          // Победа
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
@@ -1502,13 +1476,11 @@
             document.getElementById('winHighScore').textContent = highScore.toLocaleString();
             setTimeout(() => { winModal.style.display = 'flex'; }, 350);
           }
-          saveGame();
         } 
         else if (targetVal === null) {
           setItemValByKey(to, sourceVal);
           setItemValByKey(from, null);
           triggerHaptic('impact');
-          saveGame();
         }
       }
 
@@ -1598,13 +1570,8 @@
       nicknameInput.value = getPlayerNickname();
     }
 
-    // ---------------- ИГРОВОЙ ЦИКЛ ----------------
-    function initGame(forceReset = false) {
-      if (!forceReset && loadGame()) {
-        render();
-        return;
-      }
-
+    // При каждом запуске с нуля: чистое поле и 0 очков!
+    function initGame() {
       board = Array(GRID_SIZE * GRID_SIZE).fill(null);
       warehouseItem = null;
       score = 0;
@@ -1614,6 +1581,8 @@
       comboMultiplier = 1;
       unlockedLevels = new Set([1]);
       stopConfetti();
+
+      loadHighScoreOnly();
 
       discoveryToast.classList.remove('show');
       winModal.style.display = 'none';
@@ -1626,7 +1595,6 @@
       spawnTile();
       spawnTile();
       render();
-      saveGame();
 
       showStartMenu();
     }
@@ -1702,12 +1670,12 @@
       e.preventDefault();
       initAudio();
       if (confirm('Выйти в главное меню? Текущий раунд будет сброшен.')) {
-        initGame(true);
+        initGame();
       }
     });
 
-    btnWinRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(true); });
-    btnLoseRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(true); });
+    btnWinRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(); });
+    btnLoseRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(); });
 
     btnWinShare.addEventListener('pointerdown', (e) => { e.preventDefault(); shareScore(); });
     btnLoseShare.addEventListener('pointerdown', (e) => { e.preventDefault(); shareScore(); });
