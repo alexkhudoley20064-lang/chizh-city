@@ -1,2 +1,2 @@
-# chizhik-city
+# chizh-city
 Merge town!
