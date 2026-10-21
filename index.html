@@ -315,6 +315,7 @@
       pointer-events: none;
     }
 
+    /* Панель кнопок без склада */
     .controls-panel {
       display: flex;
       gap: 10px;
@@ -440,6 +441,7 @@
       to { transform: translateY(-4px) scale(1.1); }
     }
 
+    /* Модальные окна */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -726,12 +728,14 @@
 
     <div class="grid" id="grid"></div>
 
+    <!-- Панель кнопок (без склада) -->
     <div class="controls-panel">
       <button class="btn-spawn" id="btnSpawn">Построить 🏗️</button>
       <button class="btn-restart" id="btnReset">🔄 В меню</button>
     </div>
   </div>
 
+  <!-- Стартовое меню -->
   <div class="modal-overlay" id="startModal" style="display: flex;">
     <div class="modal-card">
       <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">ChizhCity 🏙️</h2>
@@ -762,6 +766,7 @@
     </div>
   </div>
 
+  <!-- Окно победы -->
   <div class="modal-overlay" id="winModal">
     <div class="modal-card modal-win-card">
       <div class="win-crown">👑</div>
@@ -787,6 +792,7 @@
     </div>
   </div>
 
+  <!-- Окно поражения -->
   <div class="modal-overlay" id="loseModal">
     <div class="modal-card">
       <div style="font-size: 3.2rem; margin-bottom: 6px;">💥</div>
@@ -809,6 +815,7 @@
     </div>
   </div>
 
+  <!-- Окно подтверждения выхода (для браузера вне Telegram) -->
   <div class="modal-overlay" id="fallbackConfirmModal">
     <div class="modal-card">
       <h2 style="font-size: 1.4rem; color: var(--primary); margin-bottom: 8px;">Выйти в меню?</h2>
@@ -822,6 +829,7 @@
     </div>
   </div>
 
+  <!-- Окно Лидерборда -->
   <div class="modal-overlay" id="leaderboardModal">
     <div class="modal-card">
       <h2 class="leaderboard-title">🏆 Топ Мэров (Онлайн)</h2>
@@ -838,9 +846,6 @@
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
     const SUPABASE_URL = "https://jrpbebupjrrspjfmbzzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpycGJlYnVwanJyc3BqZm1ienp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDM2MjgsImV4cCI6MjEwODExOTYyOH0.wD14zO0qyHmuP3YcrAqu_2GREzSkIc8rpzrUYXvopfM";
-
-    // 👇 Ссылка на вашу игру (замените на реальную ссылку бота/мини-приложения)
-    const GAME_URL = "https://t.me/your_bot_name/your_game";
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -953,3 +958,783 @@
             gain.connect(masterGain);
 
             osc.start(t);
+            osc.stop(t + 1.25);
+          });
+        }, 520);
+      } catch (e) {}
+    }
+
+    function playDefeatSound() {
+      if (isMuted) return;
+      initAudio();
+      try {
+        const notes = [329.63, 311.13, 293.66, 246.94];
+        notes.forEach((freq, idx) => {
+          const isLast = idx === notes.length - 1;
+          const t = audioCtx.currentTime + idx * 0.22;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const filter = audioCtx.createBiquadFilter();
+
+          osc.type = 'sawtooth';
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(850, t);
+
+          osc.frequency.setValueAtTime(freq, t);
+          if (isLast) osc.frequency.linearRampToValueAtTime(130, t + 0.6);
+
+          gain.gain.setValueAtTime(0.65, t);
+          gain.gain.exponentialRampToValueAtTime(0.001, t + (isLast ? 0.75 : 0.24));
+
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(masterGain);
+
+          osc.start(t);
+          osc.stop(t + (isLast ? 0.8 : 0.28));
+        });
+      } catch (e) {}
+    }
+
+    const btnSound = document.getElementById('btnSound');
+    btnSound.addEventListener('click', (e) => {
+      initAudio();
+      isMuted = !isMuted;
+      btnSound.textContent = isMuted ? '🔇' : '🔊';
+      try { localStorage.setItem('chizhik_city_muted', isMuted ? '1' : '0'); } catch(e) {}
+    });
+
+    try {
+      if (localStorage.getItem('chizhik_city_muted') === '1') {
+        isMuted = true;
+        btnSound.textContent = '🔇';
+      }
+    } catch(e) {}
+
+    window.addEventListener('click', () => initAudio(), { once: true });
+
+    // ---------------- КОНФЕТТИ ----------------
+    const canvas = document.getElementById('confettiCanvas');
+    const ctx = canvas.getContext('2d');
+    let confettiParticles = [];
+    let isConfettiLoopActive = false;
+    let isContinuousConfetti = false;
+
+    function resizeCanvas() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    const CONFETTI_COLORS = ['#FCDF25', '#9FB1FC', '#ffffff', '#38bdf8', '#fbbf24', '#f59e0b'];
+
+    class ConfettiPiece {
+      constructor(isBurst = true) { this.reset(isBurst); }
+      reset(isBurst = false) {
+        this.x = isBurst ? canvas.width / 2 + (Math.random() - 0.5) * 80 : Math.random() * canvas.width;
+        this.y = isBurst ? canvas.height * 0.35 : -20;
+        const angle = isBurst ? Math.random() * Math.PI * 2 : Math.PI / 2 + (Math.random() - 0.5);
+        const speed = isBurst ? Math.random() * 10 + 4 : Math.random() * 3 + 2;
+        this.vx = Math.cos(angle) * speed;
+        this.vy = isBurst ? Math.sin(angle) * speed - 4 : speed;
+        this.size = Math.random() * 8 + 6;
+        this.color = CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)];
+        this.rotation = Math.random() * 360;
+        this.rotSpeed = (Math.random() - 0.5) * 8;
+        this.gravity = 0.25;
+        this.opacity = 1;
+      }
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        this.vy += this.gravity;
+        this.rotation += this.rotSpeed;
+        if (!isContinuousConfetti) {
+          this.opacity -= 0.012;
+        } else if (this.y > canvas.height + 20) {
+          this.reset(false);
+        }
+      }
+      draw() {
+        if (this.opacity <= 0) return;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate((this.rotation * Math.PI) / 180);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = Math.max(0, this.opacity);
+        ctx.fillRect(-this.size / 2, -this.size / 4, this.size, this.size / 2);
+        ctx.restore();
+      }
+    }
+
+    function burstConfetti(amount = 70) {
+      isContinuousConfetti = false;
+      for (let i = 0; i < amount; i++) confettiParticles.push(new ConfettiPiece(true));
+      if (!isConfettiLoopActive) runConfettiLoop();
+    }
+
+    function startVictoryConfetti() {
+      isContinuousConfetti = true;
+      confettiParticles = [];
+      for (let i = 0; i < 90; i++) {
+        const p = new ConfettiPiece(false);
+        p.y = Math.random() * canvas.height;
+        confettiParticles.push(p);
+      }
+      if (!isConfettiLoopActive) runConfettiLoop();
+    }
+
+    function stopConfetti() {
+      isContinuousConfetti = false;
+      confettiParticles = [];
+    }
+
+    function runConfettiLoop() {
+      isConfettiLoopActive = true;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiParticles = confettiParticles.filter(p => p.opacity > 0 && p.y < canvas.height + 40);
+      confettiParticles.forEach(p => { p.update(); p.draw(); });
+      if (confettiParticles.length > 0 || isContinuousConfetti) {
+        requestAnimationFrame(runConfettiLoop);
+      } else {
+        isConfettiLoopActive = false;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
+    // ---------------- БАЗА ДАННЫХ ЗДАНИЙ ----------------
+    const TILES = {
+      1: { name: 'Стройка', emoji: '🏗️', score: 0 },
+      2: { name: 'Заброшка', emoji: '🏚️', score: 10 },
+      3: { name: 'Домик', emoji: '🏠', score: 30 },
+      4: { name: 'Средний дом', emoji: '🏡', score: 80 },
+      5: { name: 'Квартал', emoji: '🏘️', score: 200 },
+      6: { name: 'Многоквартирник', emoji: '🏬', score: 500 },
+      7: { name: 'Высотка', emoji: '🏢', score: 1200 },
+      8: { name: 'Вилла', emoji: '🏰', score: 3000 },
+      9: { name: 'ЧижСкай', isImage: true, score: 10000 }
+    };
+
+    const MAX_LEVEL = 9;
+    const GRID_SIZE = 3;
+
+    let board = Array(GRID_SIZE * GRID_SIZE).fill(null);
+    let score = 0;
+    let highScore = 0;
+    let animatedIndex = null;
+    let animationType = null;
+
+    let isGameStarted = false;
+    let isGameOver = false;
+
+    let isDragging = false;
+    let dragSourceKey = null;
+    let currentHoverKey = null;
+
+    let comboMultiplier = 1;
+    let lastMergeTime = 0;
+    const COMBO_TIMEOUT = 3000;
+    let comboBadgeTimeout = null;
+
+    let unlockedLevels = new Set([1]);
+    let spawnCount = 0;
+
+    const SPAWN_INTERVAL = 4500;
+    let spawnTimer = 0;
+    let lastTimestamp = performance.now();
+
+    const gridEl = document.getElementById('grid');
+    const timerBarEl = document.getElementById('timerBar');
+    const warningTextEl = document.getElementById('warningText');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const highScoreDisplay = document.getElementById('highScoreDisplay');
+    const comboBadge = document.getElementById('comboBadge');
+
+    const btnSpawn = document.getElementById('btnSpawn');
+    const btnReset = document.getElementById('btnReset');
+    const winModal = document.getElementById('winModal');
+    const loseModal = document.getElementById('loseModal');
+    const btnWinRestart = document.getElementById('btnWinRestart');
+    const btnLoseRestart = document.getElementById('btnLoseRestart');
+    const btnWinShare = document.getElementById('btnWinShare');
+    const btnLoseShare = document.getElementById('btnLoseShare');
+    const dragGhost = document.getElementById('dragGhost');
+
+    const discoveryToast = document.getElementById('discoveryToast');
+    const toastIconBox = document.getElementById('toastIconBox');
+    const toastName = document.getElementById('toastName');
+    let toastTimeout = null;
+
+    const startModal = document.getElementById('startModal');
+    const btnStartGame = document.getElementById('btnStartGame');
+    const btnMenuLeaderboard = document.getElementById('btnMenuLeaderboard');
+    const nicknameInput = document.getElementById('nicknameInput');
+
+    const btnLeaderboard = document.getElementById('btnLeaderboard');
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    const btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
+    const leaderboardList = document.getElementById('leaderboardList');
+
+    const fallbackConfirmModal = document.getElementById('fallbackConfirmModal');
+    const btnConfirmYes = document.getElementById('btnConfirmYes');
+    const btnConfirmNo = document.getElementById('btnConfirmNo');
+
+    function getPlayerNickname() {
+      let saved = localStorage.getItem('chizhik_player_nickname');
+      if (!saved) {
+        const tgName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name;
+        saved = tgName || 'Мэр ChizhCity';
+      }
+      return saved;
+    }
+
+    function setPlayerNickname(name) {
+      const clean = name.trim() || 'Мэр ChizhCity';
+      localStorage.setItem('chizhik_player_nickname', clean);
+      return clean;
+    }
+
+    function getMyPlayerKey() {
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id) return `tg_${tgUser.id}`;
+      let localId = localStorage.getItem('chizh_local_uid');
+      if (!localId) {
+        localId = 'anon_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('chizh_local_uid', localId);
+      }
+      return localId;
+    }
+
+    nicknameInput.value = getPlayerNickname();
+    nicknameInput.addEventListener('change', () => {
+      setPlayerNickname(nicknameInput.value);
+      saveScoreToCloud(highScore);
+    });
+
+    function saveHighScoreOnly() {
+      try {
+        localStorage.setItem('chizhik_city_highscore', highScore.toString());
+      } catch (e) {}
+    }
+
+    function loadHighScoreOnly() {
+      try {
+        highScore = parseInt(localStorage.getItem('chizhik_city_highscore') || '0', 10);
+        updateScoreUI();
+      } catch (e) {}
+    }
+
+    function updateScoreUI() {
+      scoreDisplay.textContent = score.toLocaleString();
+      highScoreDisplay.textContent = highScore.toLocaleString();
+    }
+
+    function addScore(nextLevel) {
+      const now = performance.now();
+      if (now - lastMergeTime <= COMBO_TIMEOUT) {
+        comboMultiplier++;
+      } else {
+        comboMultiplier = 1;
+      }
+      lastMergeTime = now;
+
+      const basePts = TILES[nextLevel].score;
+      const earned = basePts * comboMultiplier;
+      score += earned;
+
+      if (score > highScore) {
+        highScore = score;
+        saveHighScoreOnly();
+      }
+      updateScoreUI();
+
+      if (comboMultiplier > 1) {
+        showComboBadge(comboMultiplier, earned);
+      }
+    }
+
+    function showComboBadge(mult, earned) {
+      comboBadge.textContent = `🔥 КОМБО x${mult}! +${earned}`;
+      comboBadge.classList.add('show');
+      if (comboBadgeTimeout) clearTimeout(comboBadgeTimeout);
+      comboBadgeTimeout = setTimeout(() => {
+        comboBadge.classList.remove('show');
+      }, 1800);
+    }
+
+    function getBuildingHTML(level) {
+      const item = TILES[level];
+      if (item.isImage) {
+        return `<img class="building-img" src="${CHIZHIK_SKY_IMG_URL}" alt="ЧижСкай">`;
+      }
+      return `<span class="building-emoji">${item.emoji}</span>`;
+    }
+
+    function notifyNewBuilding(level) {
+      const item = TILES[level];
+      toastIconBox.innerHTML = getBuildingHTML(level);
+      toastName.textContent = item.name;
+
+      discoveryToast.classList.add('show');
+      burstConfetti(65);
+      triggerHaptic('success');
+
+      if (toastTimeout) clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        discoveryToast.classList.remove('show');
+      }, 2600);
+    }
+
+    function getEmptyIndices() {
+      const empty = [];
+      for (let i = 0; i < board.length; i++) {
+        if (board[i] === null) empty.push(i);
+      }
+      return empty;
+    }
+
+    function getNextSpawnLevel() {
+      spawnCount++;
+      if (spawnCount <= 5) {
+        return 1;
+      } else {
+        const lvl = Math.floor(Math.random() * 3) + 1;
+        if (!unlockedLevels.has(lvl)) {
+          unlockedLevels.add(lvl);
+          notifyNewBuilding(lvl);
+        }
+        return lvl;
+      }
+    }
+
+    function spawnTile() {
+      const emptyIndices = getEmptyIndices();
+      if (emptyIndices.length === 0) return false;
+
+      const randomIdx = emptyIndices[Math.floor(Math.random() * emptyIndices.length)];
+      board[randomIdx] = getNextSpawnLevel();
+      animatedIndex = randomIdx;
+      animationType = 'anim-spawn';
+      return true;
+    }
+
+    function renderCellContent(cell, val) {
+      if (val === null) {
+        cell.className = 'cell empty';
+        cell.innerHTML = '';
+      } else {
+        cell.className = 'cell occupied';
+        const item = TILES[val];
+        cell.innerHTML = `
+          ${getBuildingHTML(val)}
+          <span class="building-lvl">${item.name}</span>
+        `;
+      }
+    }
+
+    function render() {
+      gridEl.innerHTML = '';
+      board.forEach((val, idx) => {
+        const cell = document.createElement('div');
+        cell.dataset.index = idx;
+        renderCellContent(cell, val);
+
+        if (idx === animatedIndex && animationType) {
+          cell.classList.add(animationType);
+        }
+        gridEl.appendChild(cell);
+      });
+
+      animatedIndex = null;
+      animationType = null;
+    }
+
+    // ---------------- DRAG & DROP ----------------
+    function onPointerDownUnified(e) {
+      if (isGameOver) return;
+      if (!isGameStarted) startGameSession();
+      initAudio();
+
+      const cell = e.target.closest('.cell');
+      if (!cell) return;
+
+      const key = parseInt(cell.dataset.index, 10);
+      const val = board[key];
+      if (val === null) return;
+
+      isDragging = true;
+      dragSourceKey = key;
+      currentHoverKey = null;
+
+      const item = TILES[val];
+      dragGhost.innerHTML = `
+        ${getBuildingHTML(val)}
+        <span class="building-lvl" style="color: #FCDF25; font-size: 0.75rem; text-shadow: 0 2px 5px rgba(0,0,0,0.8);">${item.name}</span>
+      `;
+      dragGhost.style.left = `${e.clientX}px`;
+      dragGhost.style.top = `${e.clientY}px`;
+      dragGhost.style.display = 'flex';
+
+      cell.classList.add('dragging-source');
+      window.addEventListener('pointermove', onPointerMoveUnified);
+      window.addEventListener('pointerup', onPointerUpUnified);
+      window.addEventListener('pointercancel', onPointerUpUnified);
+    }
+
+    function onPointerMoveUnified(e) {
+      if (!isDragging) return;
+
+      dragGhost.style.left = `${e.clientX}px`;
+      dragGhost.style.top = `${e.clientY}px`;
+
+      dragGhost.style.display = 'none';
+      const elementUnder = document.elementFromPoint(e.clientX, e.clientY);
+      dragGhost.style.display = 'flex';
+
+      const targetCell = elementUnder ? elementUnder.closest('.cell') : null;
+      const targetKey = targetCell ? parseInt(targetCell.dataset.index, 10) : null;
+
+      document.querySelectorAll('.cell').forEach(c => {
+        c.classList.remove('target-merge', 'target-move');
+      });
+
+      currentHoverKey = targetKey;
+
+      if (targetKey !== null && targetKey !== dragSourceKey) {
+        const sourceVal = board[dragSourceKey];
+        const targetVal = board[targetKey];
+
+        if (targetVal === sourceVal && targetVal < MAX_LEVEL) {
+          targetCell.classList.add('target-merge');
+        } else if (targetVal === null) {
+          targetCell.classList.add('target-move');
+        }
+      }
+    }
+
+    function onPointerUpUnified() {
+      if (!isDragging) return;
+
+      dragGhost.style.display = 'none';
+      document.querySelectorAll('.cell').forEach(c => {
+        c.classList.remove('dragging-source', 'target-merge', 'target-move');
+      });
+
+      window.removeEventListener('pointermove', onPointerMoveUnified);
+      window.removeEventListener('pointerup', onPointerUpUnified);
+      window.removeEventListener('pointercancel', onPointerUpUnified);
+
+      if (currentHoverKey !== null && currentHoverKey !== dragSourceKey) {
+        const from = dragSourceKey;
+        const to = currentHoverKey;
+        const sourceVal = board[from];
+        const targetVal = board[to];
+
+        if (sourceVal === targetVal && sourceVal < MAX_LEVEL) {
+          const nextLevel = sourceVal + 1;
+          board[from] = null;
+          board[to] = nextLevel;
+
+          animatedIndex = to;
+          animationType = 'anim-merge';
+
+          playBubbleSound(nextLevel);
+          addScore(nextLevel);
+
+          const isFirstDiscovery = !unlockedLevels.has(nextLevel);
+          if (isFirstDiscovery) {
+            unlockedLevels.add(nextLevel);
+            if (nextLevel < MAX_LEVEL) notifyNewBuilding(nextLevel);
+          } else {
+            triggerHaptic('impact');
+          }
+
+          if (nextLevel === MAX_LEVEL) {
+            isGameOver = true;
+            triggerHaptic('success');
+            playVictorySound();
+            startVictoryConfetti();
+            btnLeaderboard.style.display = 'flex';
+            document.getElementById('winFinalScore').textContent = score.toLocaleString();
+            document.getElementById('winHighScore').textContent = highScore.toLocaleString();
+            saveScoreToCloud(score);
+            setTimeout(() => { winModal.style.display = 'flex'; }, 350);
+          }
+        } 
+        else if (targetVal === null) {
+          board[to] = sourceVal;
+          board[from] = null;
+          triggerHaptic('impact');
+        }
+      }
+
+      isDragging = false;
+      dragSourceKey = null;
+      currentHoverKey = null;
+      render();
+    }
+
+    gridEl.addEventListener('pointerdown', onPointerDownUnified);
+
+    // ---------------- РАБОТА С БАЗОЙ ДАННЫХ ----------------
+    async function saveScoreToCloud(scoreToSend) {
+      if (scoreToSend <= 0) return;
+      const myKey = getMyPlayerKey();
+      const myNick = getPlayerNickname();
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            player_key: myKey,
+            nickname: myNick,
+            score: scoreToSend,
+            updated_at: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        console.warn("Cloud save error:", e);
+      }
+    }
+
+    async function fetchLeaderboardFromCloud() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/leaderboard?select=player_key,nickname,score&order=score.desc&limit=10`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.warn("Cloud fetch error:", e);
+      }
+      return null;
+    }
+
+    async function openLeaderboard() {
+      initAudio();
+      leaderboardModal.style.display = 'flex';
+      leaderboardList.innerHTML = '<div style="text-align: center; color: #9FB1FC; padding: 20px;">Загрузка рекордов...</div>';
+
+      const myKey = getMyPlayerKey();
+      const myNick = getPlayerNickname();
+      const currentBest = Math.max(score, highScore);
+
+      if (currentBest > 0) {
+        await saveScoreToCloud(currentBest);
+      }
+
+      let list = await fetchLeaderboardFromCloud();
+
+      if (!list || list.length === 0) {
+        list = [
+          { player_key: "bot_1", nickname: "Владимир_носков", score: 28400 },
+          { player_key: "bot_2", nickname: "Дмитрий 67", score: 19800 },
+          { player_key: "bot_3", nickname: "Елизавета паркет", score: 14300 },
+          { player_key: "bot_4", nickname: "Андрей лимонное пиво", score: 9700 },
+          { player_key: "bot_5", nickname: "Президент какашек", score: 5200 },
+          { player_key: myKey, nickname: myNick, score: currentBest }
+        ];
+        list.sort((a, b) => b.score - a.score);
+      }
+
+      leaderboardList.innerHTML = '';
+      list.forEach((item, index) => {
+        const row = document.createElement('div');
+        const isMe = (item.player_key === myKey) || (item.nickname === myNick);
+        row.className = `leaderboard-item ${isMe ? 'is-me' : ''}`;
+
+        const medals = ['🥇', '🥈', '🥉'];
+        const rankDisplay = index < 3 ? medals[index] : `${index + 1}.`;
+
+        row.innerHTML = `
+          <div class="lb-left">
+            <span class="lb-rank">${rankDisplay}</span>
+            <span class="lb-name">${item.nickname}</span>
+            ${isMe ? '<span class="lb-badge">ВЫ</span>' : ''}
+          </div>
+          <span class="lb-score">${Number(item.score).toLocaleString()}</span>
+        `;
+        leaderboardList.appendChild(row);
+      });
+    }
+
+    // ---------------- КНОПКИ И УПРАВЛЕНИЕ ----------------
+    btnMenuLeaderboard.addEventListener('click', () => openLeaderboard());
+    btnLeaderboard.addEventListener('click', () => { if (!isGameStarted) openLeaderboard(); });
+    btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.style.display = 'none'; });
+
+    function startGameSession() {
+      initAudio();
+      setPlayerNickname(nicknameInput.value);
+      isGameStarted = true;
+      startModal.style.display = 'none';
+      btnLeaderboard.style.display = 'none';
+      lastTimestamp = performance.now();
+    }
+
+    btnStartGame.addEventListener('click', () => startGameSession());
+
+    function showStartMenu() {
+      isGameStarted = false;
+      btnLeaderboard.style.display = 'flex';
+      startModal.style.display = 'flex';
+      nicknameInput.value = getPlayerNickname();
+    }
+
+    btnSpawn.addEventListener('click', () => {
+      initAudio();
+      if (isGameOver) return;
+      if (!isGameStarted) startGameSession();
+
+      if (spawnTile()) {
+        spawnTimer = 0;
+        triggerHaptic('impact');
+        render();
+      } else {
+        triggerHaptic('error');
+      }
+    });
+
+    // Нативное подтверждение выхода в Telegram:
+    function handleExitRequest() {
+      initAudio();
+      if (!isGameStarted || isGameOver) {
+        showStartMenu();
+        return;
+      }
+
+      const confirmText = "Вы уверены, что хотите выйти в меню? Текущий раунд будет завершён.";
+
+      // Если запущено в Telegram — вызываем официальное нативное окно:
+      if (window.Telegram?.WebApp?.showConfirm) {
+        window.Telegram.WebApp.showConfirm(confirmText, (confirmed) => {
+          if (confirmed) {
+            initGame();
+          }
+        });
+      } else {
+        // Резервное окно для браузера
+        fallbackConfirmModal.style.display = 'flex';
+      }
+    }
+
+    btnReset.addEventListener('click', handleExitRequest);
+
+    btnConfirmYes.addEventListener('click', () => {
+      fallbackConfirmModal.style.display = 'none';
+      initGame();
+    });
+
+    btnConfirmNo.addEventListener('click', () => {
+      fallbackConfirmModal.style.display = 'none';
+    });
+
+    btnWinRestart.addEventListener('click', () => { initAudio(); initGame(); });
+    btnLoseRestart.addEventListener('click', () => { initAudio(); initGame(); });
+
+    btnWinShare.addEventListener('click', () => shareScore());
+    btnLoseShare.addEventListener('click', () => shareScore());
+
+    // ---------------- ИГРОВОЙ ЦИКЛ ----------------
+    function initGame() {
+      board = Array(GRID_SIZE * GRID_SIZE).fill(null);
+      score = 0;
+      isGameOver = false;
+      spawnTimer = 0;
+      spawnCount = 0;
+      comboMultiplier = 1;
+      unlockedLevels = new Set([1]);
+      stopConfetti();
+
+      loadHighScoreOnly();
+
+      discoveryToast.classList.remove('show');
+      winModal.style.display = 'none';
+      loseModal.style.display = 'none';
+      leaderboardModal.style.display = 'none';
+      fallbackConfirmModal.style.display = 'none';
+      warningTextEl.style.display = 'none';
+      timerBarEl.classList.remove('danger');
+
+      updateScoreUI();
+      spawnTile();
+      spawnTile();
+      render();
+
+      showStartMenu();
+    }
+
+    function gameLoop(now) {
+      const delta = now - lastTimestamp;
+      lastTimestamp = now;
+
+      if (isGameStarted && !isGameOver) {
+        spawnTimer += delta;
+        const emptyCellsCount = getEmptyIndices().length;
+
+        if (emptyCellsCount === 0) {
+          timerBarEl.classList.add('danger');
+          warningTextEl.style.display = 'block';
+        } else {
+          timerBarEl.classList.remove('danger');
+          warningTextEl.style.display = 'none';
+        }
+
+        if (spawnTimer >= SPAWN_INTERVAL) {
+          spawnTimer = 0;
+
+          if (emptyCellsCount === 0) {
+            isGameOver = true;
+            triggerHaptic('error');
+            playDefeatSound();
+            btnLeaderboard.style.display = 'flex';
+            document.getElementById('loseFinalScore').textContent = score.toLocaleString();
+            document.getElementById('loseHighScore').textContent = highScore.toLocaleString();
+            saveScoreToCloud(score);
+            loseModal.style.display = 'flex';
+          } else {
+            spawnTile();
+            render();
+          }
+        }
+
+        const progress = Math.min((spawnTimer / SPAWN_INTERVAL) * 100, 100);
+        timerBarEl.style.width = `${progress}%`;
+      }
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    function shareScore() {
+      const myName = getPlayerNickname();
+      const text = encodeURIComponent(
+        `🏙️ Мэр ${myName} построил ЧижСкай и набрал ${score.toLocaleString()} очков в ChizhCity! 🎮 Сможешь побить мой рекорд?`
+      );
+      const shareUrl = `https://t.me/share/url?text=${text}`;
+
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(shareUrl);
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    }
+
+    initGame();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
