@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Chizhik City</title>
+  <title>ChizhCity</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
     :root {
@@ -720,7 +720,7 @@
   <div class="game-container">
     <header>
       <div class="header-top">
-        <h1>Chizhik City</h1>
+        <h1>ChizhCity</h1>
         <div class="header-actions">
           <button class="icon-btn" id="btnLeaderboard" title="Лидерборд">🏆</button>
           <button class="icon-btn" id="btnSound" title="Звук">🔊</button>
@@ -728,8 +728,8 @@
       </div>
 
       <p class="instructions">
-        Эволюционируйте от Стройки 🏗️ до ЧижикСкай 
-        <img class="inline-chizhik" src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижикСкай">
+        Эволюционируйте от Стройки 🏗️ до ЧижСкай 
+        <img class="inline-chizhik" src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижСкай">
       </p>
 
       <div class="score-board">
@@ -767,16 +767,16 @@
     </div>
   </div>
 
-  <!-- Стартовое меню с правилами -->
+  <!-- Стартовое меню -->
   <div class="modal-overlay" id="startModal" style="display: flex;">
     <div class="modal-card">
-      <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">Chizhik City 🏙️</h2>
+      <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">ChizhCity 🏙️</h2>
       <p style="font-size: 0.82rem; color: #9FB1FC;">Добро пожаловать, будущий Мэр!</p>
 
       <div class="rules-list">
         <div class="rules-item">
           <span>🏗️</span>
-          <span><b>Объединяйте</b> одинаковые здания перетаскиванием, чтобы построить небоскрёб ЧижикСкай.</span>
+          <span><b>Объединяйте</b> одинаковые здания перетаскиванием, чтобы построить небоскрёб ЧижСкай.</span>
         </div>
         <div class="rules-item">
           <span>📦</span>
@@ -803,11 +803,11 @@
     <div class="modal-card modal-win-card">
       <div class="win-crown">👑</div>
       <div class="win-hero-container">
-        <img src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижикСкай">
+        <img src="https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png" alt="ЧижСкай">
       </div>
       <h2 class="win-title">ТРИУМФ!</h2>
       <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px;">
-        Вы построили легендарный небоскрёб <b>ЧижикСкай</b> и покорили Chizhik City!
+        Вы построили легендарный небоскрёб <b>ЧижСкай</b> и покорили ChizhCity!
       </p>
       <div class="modal-score-box">
         <div>
@@ -1118,7 +1118,7 @@
       }
     }
 
-    // ---------------- БАЗА ДАННЫХ ЗДАНИЙ ----------------
+    // ---------------- БАЗА ДАННЫХ ЗДАНИЙ (ЧижСкай) ----------------
     const TILES = {
       1: { name: 'Стройка', emoji: '🏗️', score: 0 },
       2: { name: 'Заброшка', emoji: '🏚️', score: 10 },
@@ -1128,7 +1128,7 @@
       6: { name: 'Многоквартирник', emoji: '🏬', score: 500 },
       7: { name: 'Высотка', emoji: '🏢', score: 1200 },
       8: { name: 'Вилла', emoji: '🏰', score: 3000 },
-      9: { name: 'ЧижикСкай', isImage: true, score: 10000 }
+      9: { name: 'ЧижСкай', isImage: true, score: 10000 }
     };
 
     const MAX_LEVEL = 9;
@@ -1197,13 +1197,13 @@
       let saved = localStorage.getItem('chizhik_player_nickname');
       if (!saved) {
         const tgName = window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name;
-        saved = tgName || 'Мэр Чижика';
+        saved = tgName || 'Мэр ChizhCity';
       }
       return saved;
     }
 
     function setPlayerNickname(name) {
-      const clean = name.trim() || 'Мэр Чижика';
+      const clean = name.trim() || 'Мэр ChizhCity';
       localStorage.setItem('chizhik_player_nickname', clean);
       return clean;
     }
@@ -1213,7 +1213,6 @@
       setPlayerNickname(nicknameInput.value);
     });
 
-    // Сохраняем ТОЛЬКО рекорд, чтобы доска не залипала при выходе!
     function saveHighScoreOnly() {
       try {
         localStorage.setItem('chizhik_city_highscore', highScore.toString());
@@ -1268,7 +1267,7 @@
     function getBuildingHTML(level) {
       const item = TILES[level];
       if (item.isImage) {
-        return `<img class="building-img" src="${CHIZHIK_SKY_IMG_URL}" alt="ЧижикСкай">`;
+        return `<img class="building-img" src="${CHIZHIK_SKY_IMG_URL}" alt="ЧижСкай">`;
       }
       return `<span class="building-emoji">${item.emoji}</span>`;
     }
@@ -1465,7 +1464,6 @@
             triggerHaptic('impact');
           }
 
-          // Победа
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
@@ -1570,7 +1568,6 @@
       nicknameInput.value = getPlayerNickname();
     }
 
-    // При каждом запуске с нуля: чистое поле и 0 очков!
     function initGame() {
       board = Array(GRID_SIZE * GRID_SIZE).fill(null);
       warehouseItem = null;
@@ -1642,7 +1639,7 @@
     function shareScore() {
       const myName = getPlayerNickname();
       const text = encodeURIComponent(
-        `🏙️ Мэр ${myName} построил ЧижикСкай и набрал ${score.toLocaleString()} очков в Chizhik City! 🎮 Сможешь побить мой рекорд?`
+        `🏙️ Мэр ${myName} построил ЧижСкай и набрал ${score.toLocaleString()} очков в ChizhCity! 🎮 Сможешь побить мой рекорд?`
       );
       const shareUrl = `https://t.me/share/url?text=${text}`;
 
