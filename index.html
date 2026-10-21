@@ -850,8 +850,10 @@
   <!-- Окно Лидерборда -->
   <div class="modal-overlay" id="leaderboardModal">
     <div class="modal-card">
-      <h2 class="leaderboard-title">🏆 Топ Мэров</h2>
-      <div class="leaderboard-list" id="leaderboardList"></div>
+      <h2 class="leaderboard-title">🏆 Топ Мэров (Онлайн)</h2>
+      <div class="leaderboard-list" id="leaderboardList">
+        <div style="text-align: center; color: #9FB1FC; padding: 20px;">Загрузка рекордов...</div>
+      </div>
       <button class="btn-win-restart" id="btnCloseLeaderboard">Назад</button>
     </div>
   </div>
@@ -860,6 +862,10 @@
 
   <script>
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
+
+    // ---------------- КЛЮЧИ SUPABASE ----------------
+    const SUPABASE_URL = "https://jrpbebupjrrspjfmbzzt.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpycGJlYnVwanJyc3BqZm1ienp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDM2MjgsImV4cCI6MjEwODExOTYyOH0.wD14zO0qyHmuP3YcrAqu_2GREzSkIc8rpzrUYXvopfM";
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -1118,7 +1124,7 @@
       }
     }
 
-    // ---------------- БАЗА ДАННЫХ ЗДАНИЙ (ЧижСкай) ----------------
+    // ---------------- БАЗА ДАННЫХ ЗДАНИЙ ----------------
     const TILES = {
       1: { name: 'Стройка', emoji: '🏗️', score: 0 },
       2: { name: 'Заброшка', emoji: '🏚️', score: 10 },
@@ -1208,9 +1214,21 @@
       return clean;
     }
 
+    function getMyPlayerKey() {
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgUser?.id) return `tg_${tgUser.id}`;
+      let localId = localStorage.getItem('chizh_local_uid');
+      if (!localId) {
+        localId = 'anon_' + Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('chizh_local_uid', localId);
+      }
+      return localId;
+    }
+
     nicknameInput.value = getPlayerNickname();
     nicknameInput.addEventListener('change', () => {
       setPlayerNickname(nicknameInput.value);
+      saveScoreToCloud(highScore);
     });
 
     function saveHighScoreOnly() {
@@ -1464,6 +1482,7 @@
             triggerHaptic('impact');
           }
 
+          // ПОБЕДА
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
@@ -1472,6 +1491,7 @@
             btnLeaderboard.style.display = 'flex';
             document.getElementById('winFinalScore').textContent = score.toLocaleString();
             document.getElementById('winHighScore').textContent = highScore.toLocaleString();
+            saveScoreToCloud(score);
             setTimeout(() => { winModal.style.display = 'flex'; }, 350);
           }
         } 
@@ -1491,26 +1511,88 @@
     gridEl.addEventListener('pointerdown', onPointerDownUnified);
     warehouseSlotEl.addEventListener('pointerdown', onPointerDownUnified);
 
-    // ---------------- ЛИДЕРБОРД ----------------
-    function openLeaderboard() {
+    // ---------------- РАБОТА С БАЗОЙ ДАННЫХ (SUPABASE) ----------------
+    async function saveScoreToCloud(scoreToSend) {
+      if (scoreToSend <= 0) return;
+      const myKey = getMyPlayerKey();
+      const myNick = getPlayerNickname();
+
+      try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+          method: 'POST',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'resolution=merge-duplicates'
+          },
+          body: JSON.stringify({
+            player_key: myKey,
+            nickname: myNick,
+            score: scoreToSend,
+            updated_at: new Date().toISOString()
+          })
+        });
+      } catch (e) {
+        console.warn("Cloud save error:", e);
+      }
+    }
+
+    async function fetchLeaderboardFromCloud() {
+      try {
+        const res = await fetch(
+          `${SUPABASE_URL}/rest/v1/leaderboard?select=player_key,nickname,score&order=score.desc&limit=10`,
+          {
+            headers: {
+              'apikey': SUPABASE_ANON_KEY,
+              'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+          }
+        );
+        if (res.ok) {
+          return await res.json();
+        }
+      } catch (e) {
+        console.warn("Cloud fetch error:", e);
+      }
+      return null;
+    }
+
+    async function openLeaderboard() {
       initAudio();
-      const myName = setPlayerNickname(nicknameInput.value);
+      leaderboardModal.style.display = 'flex';
+      leaderboardList.innerHTML = '<div style="text-align: center; color: #9FB1FC; padding: 20px;">Загрузка рекордов...</div>';
 
-      const leaderboardData = [
-        { name: "Владимир_носков", score: 28400 },
-        { name: "Дмитрий 67", score: 19800 },
-        { name: "Елизавета паркет", score: 14300 },
-        { name: "Андрей лимонное пиво", score: 9700 },
-        { name: "Президент какашек", score: 5200 },
-        { name: myName, score: Math.max(score, highScore), isMe: true }
-      ];
+      const myKey = getMyPlayerKey();
+      const myNick = getPlayerNickname();
+      const currentBest = Math.max(score, highScore);
 
-      leaderboardData.sort((a, b) => b.score - a.score);
+      // Сохраняем актуальный рекорд перед открытием
+      if (currentBest > 0) {
+        await saveScoreToCloud(currentBest);
+      }
+
+      // Запрашиваем реальный топ из базы
+      let list = await fetchLeaderboardFromCloud();
+
+      // Если база недоступна или пуста — показываем резервный список
+      if (!list || list.length === 0) {
+        list = [
+          { player_key: "bot_1", nickname: "Владимир_носков", score: 28400 },
+          { player_key: "bot_2", nickname: "Дмитрий 67", score: 19800 },
+          { player_key: "bot_3", nickname: "Елизавета паркет", score: 14300 },
+          { player_key: "bot_4", nickname: "Андрей лимонное пиво", score: 9700 },
+          { player_key: "bot_5", nickname: "Президент какашек", score: 5200 },
+          { player_key: myKey, nickname: myNick, score: currentBest }
+        ];
+        list.sort((a, b) => b.score - a.score);
+      }
 
       leaderboardList.innerHTML = '';
-      leaderboardData.forEach((item, index) => {
+      list.forEach((item, index) => {
         const row = document.createElement('div');
-        row.className = `leaderboard-item ${item.isMe ? 'is-me' : ''}`;
+        const isMe = (item.player_key === myKey) || (item.nickname === myNick);
+        row.className = `leaderboard-item ${isMe ? 'is-me' : ''}`;
 
         const medals = ['🥇', '🥈', '🥉'];
         const rankDisplay = index < 3 ? medals[index] : `${index + 1}.`;
@@ -1518,15 +1600,13 @@
         row.innerHTML = `
           <div class="lb-left">
             <span class="lb-rank">${rankDisplay}</span>
-            <span class="lb-name">${item.name}</span>
-            ${item.isMe ? '<span class="lb-badge">ВЫ</span>' : ''}
+            <span class="lb-name">${item.nickname}</span>
+            ${isMe ? '<span class="lb-badge">ВЫ</span>' : ''}
           </div>
-          <span class="lb-score">${item.score.toLocaleString()}</span>
+          <span class="lb-score">${Number(item.score).toLocaleString()}</span>
         `;
         leaderboardList.appendChild(row);
       });
-
-      leaderboardModal.style.display = 'flex';
     }
 
     btnMenuLeaderboard.addEventListener('pointerdown', (e) => {
@@ -1622,6 +1702,7 @@
             btnLeaderboard.style.display = 'flex';
             document.getElementById('loseFinalScore').textContent = score.toLocaleString();
             document.getElementById('loseHighScore').textContent = highScore.toLocaleString();
+            saveScoreToCloud(score);
             loseModal.style.display = 'flex';
           } else {
             spawnTile();
@@ -1641,44 +1722,3 @@
       const text = encodeURIComponent(
         `🏙️ Мэр ${myName} построил ЧижСкай и набрал ${score.toLocaleString()} очков в ChizhCity! 🎮 Сможешь побить мой рекорд?`
       );
-      const shareUrl = `https://t.me/share/url?text=${text}`;
-
-      if (window.Telegram?.WebApp?.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(shareUrl);
-      } else {
-        window.open(shareUrl, '_blank');
-      }
-    }
-
-    btnSpawn.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      initAudio();
-      if (!isGameStarted || isGameOver) return;
-      if (spawnTile()) {
-        spawnTimer = 0;
-        triggerHaptic('impact');
-        render();
-      } else {
-        triggerHaptic('error');
-      }
-    });
-
-    btnReset.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      initAudio();
-      if (confirm('Выйти в главное меню? Текущий раунд будет сброшен.')) {
-        initGame();
-      }
-    });
-
-    btnWinRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(); });
-    btnLoseRestart.addEventListener('pointerdown', (e) => { e.preventDefault(); initAudio(); initGame(); });
-
-    btnWinShare.addEventListener('pointerdown', (e) => { e.preventDefault(); shareScore(); });
-    btnLoseShare.addEventListener('pointerdown', (e) => { e.preventDefault(); shareScore(); });
-
-    initGame();
-    requestAnimationFrame(gameLoop);
-  </script>
-</body>
-</html>
