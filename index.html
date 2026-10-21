@@ -315,51 +315,17 @@
       pointer-events: none;
     }
 
-    .bottom-panel {
+    /* Панель кнопок без склада */
+    .controls-panel {
       display: flex;
-      align-items: center;
       gap: 10px;
       width: 100%;
-    }
-
-    .warehouse-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-    }
-
-    .warehouse-slot {
-      width: 70px;
-      height: 70px;
-      border: 2px dashed #9FB1FC;
-      border-radius: 16px;
-      background: rgba(12, 26, 109, 0.6);
-    }
-
-    .warehouse-slot.occupied {
-      border: 2px solid var(--primary);
-      background: var(--cell-bg);
-    }
-
-    .warehouse-label {
-      font-size: 0.62rem;
-      font-weight: 800;
-      color: #9FB1FC;
-      text-transform: uppercase;
-    }
-
-    .action-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-      height: 70px;
+      margin-top: 4px;
     }
 
     button {
       border: none;
-      border-radius: 12px;
+      border-radius: 14px;
       font-weight: 800;
       cursor: pointer;
       touch-action: manipulation;
@@ -370,10 +336,11 @@
     }
 
     .btn-spawn {
-      flex: 1;
+      flex: 2;
+      height: 48px;
       background: var(--primary);
       color: var(--primary-dark);
-      font-size: 0.95rem;
+      font-size: 1rem;
       box-shadow: 0 4px 15px rgba(252, 223, 37, 0.3);
     }
 
@@ -382,10 +349,11 @@
     }
 
     .btn-restart {
-      height: 28px;
+      flex: 1;
+      height: 48px;
       background: #0d1e78;
       color: #9FB1FC;
-      font-size: 0.75rem;
+      font-size: 0.85rem;
       border: 1px solid rgba(159, 177, 252, 0.2);
     }
 
@@ -473,6 +441,7 @@
       to { transform: translateY(-4px) scale(1.1); }
     }
 
+    /* Модальные окна */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -754,24 +723,19 @@
     </div>
 
     <div class="warning-box">
-      <span class="warning-text" id="warningText">⚠️ Нет места! Объединяйте дома или скиньте на склад!</span>
+      <span class="warning-text" id="warningText">⚠️ Нет места! Объединяйте дома быстрее!</span>
     </div>
 
     <div class="grid" id="grid"></div>
 
-    <div class="bottom-panel">
-      <div class="warehouse-container">
-        <div class="cell warehouse-slot" id="warehouseSlot" data-index="warehouse"></div>
-        <span class="warehouse-label">📦 Склад</span>
-      </div>
-      <div class="action-buttons">
-        <button class="btn-spawn" id="btnSpawn">Построить 🏗️</button>
-        <button class="btn-restart" id="btnReset">🔄 В меню</button>
-      </div>
+    <!-- Панель кнопок (без склада) -->
+    <div class="controls-panel">
+      <button class="btn-spawn" id="btnSpawn">Построить 🏗️</button>
+      <button class="btn-restart" id="btnReset">🔄 В меню</button>
     </div>
   </div>
 
-  <!-- Меню старта -->
+  <!-- Стартовое меню -->
   <div class="modal-overlay" id="startModal" style="display: flex;">
     <div class="modal-card">
       <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">ChizhCity 🏙️</h2>
@@ -783,8 +747,8 @@
           <span><b>Объединяйте</b> одинаковые здания перетаскиванием, чтобы построить небоскрёб ЧижСкай.</span>
         </div>
         <div class="rules-item">
-          <span>📦</span>
-          <span><b>Склад</b> — перетащите дом в карман снизу, чтобы временно освободить клетку на поле.</span>
+          <span>🔥</span>
+          <span><b>Комбо</b> — делайте слияния быстро подряд, чтобы умножать заработанные очки!</span>
         </div>
         <div class="rules-item">
           <span>⚠️</span>
@@ -851,6 +815,20 @@
     </div>
   </div>
 
+  <!-- Окно подтверждения выхода (для браузера вне Telegram) -->
+  <div class="modal-overlay" id="fallbackConfirmModal">
+    <div class="modal-card">
+      <h2 style="font-size: 1.4rem; color: var(--primary); margin-bottom: 8px;">Выйти в меню?</h2>
+      <p style="font-size: 0.85rem; color: #cbd5e1; margin-bottom: 18px;">
+        Текущий раунд будет завершён. Рекорд останется сохранённым!
+      </p>
+      <div style="display: flex; gap: 10px;">
+        <button class="btn-win-restart" id="btnConfirmYes" style="background: var(--accent-lose); color: #fff; flex: 1;">Выйти</button>
+        <button class="btn-restart" id="btnConfirmNo" style="height: 44px; flex: 1;">Отмена</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Окно Лидерборда -->
   <div class="modal-overlay" id="leaderboardModal">
     <div class="modal-card">
@@ -890,7 +868,7 @@
       } catch (e) {}
     }
 
-    // ---------------- ЗВУКОВОЙ ДВИЖОК ----------------
+    // ---------------- ЗВУКИ ----------------
     let audioCtx = null;
     let masterGain = null;
     let compressor = null;
@@ -1142,7 +1120,6 @@
     const GRID_SIZE = 3;
 
     let board = Array(GRID_SIZE * GRID_SIZE).fill(null);
-    let warehouseItem = null;
     let score = 0;
     let highScore = 0;
     let animatedIndex = null;
@@ -1168,7 +1145,6 @@
     let lastTimestamp = performance.now();
 
     const gridEl = document.getElementById('grid');
-    const warehouseSlotEl = document.getElementById('warehouseSlot');
     const timerBarEl = document.getElementById('timerBar');
     const warningTextEl = document.getElementById('warningText');
     const scoreDisplay = document.getElementById('scoreDisplay');
@@ -1199,6 +1175,10 @@
     const leaderboardModal = document.getElementById('leaderboardModal');
     const btnCloseLeaderboard = document.getElementById('btnCloseLeaderboard');
     const leaderboardList = document.getElementById('leaderboardList');
+
+    const fallbackConfirmModal = document.getElementById('fallbackConfirmModal');
+    const btnConfirmYes = document.getElementById('btnConfirmYes');
+    const btnConfirmNo = document.getElementById('btnConfirmNo');
 
     function getPlayerNickname() {
       let saved = localStorage.getItem('chizhik_player_nickname');
@@ -1366,34 +1346,21 @@
         gridEl.appendChild(cell);
       });
 
-      renderCellContent(warehouseSlotEl, warehouseItem);
-      warehouseSlotEl.classList.add('warehouse-slot');
-
       animatedIndex = null;
       animationType = null;
     }
 
-    // ---------------- DRAG & DROP НА СЕТКЕ ----------------
-    function getItemValByKey(key) {
-      if (key === 'warehouse') return warehouseItem;
-      return board[parseInt(key, 10)];
-    }
-
-    function setItemValByKey(key, val) {
-      if (key === 'warehouse') warehouseItem = val;
-      else board[parseInt(key, 10)] = val;
-    }
-
+    // ---------------- DRAG & DROP ----------------
     function onPointerDownUnified(e) {
       if (isGameOver) return;
-      if (!isGameStarted) startGameSession(); // Автостарт при касании фишки
+      if (!isGameStarted) startGameSession();
       initAudio();
 
       const cell = e.target.closest('.cell');
       if (!cell) return;
 
-      const key = cell.dataset.index;
-      const val = getItemValByKey(key);
+      const key = parseInt(cell.dataset.index, 10);
+      const val = board[key];
       if (val === null) return;
 
       isDragging = true;
@@ -1426,7 +1393,7 @@
       dragGhost.style.display = 'flex';
 
       const targetCell = elementUnder ? elementUnder.closest('.cell') : null;
-      const targetKey = targetCell ? targetCell.dataset.index : null;
+      const targetKey = targetCell ? parseInt(targetCell.dataset.index, 10) : null;
 
       document.querySelectorAll('.cell').forEach(c => {
         c.classList.remove('target-merge', 'target-move');
@@ -1435,8 +1402,8 @@
       currentHoverKey = targetKey;
 
       if (targetKey !== null && targetKey !== dragSourceKey) {
-        const sourceVal = getItemValByKey(dragSourceKey);
-        const targetVal = getItemValByKey(targetKey);
+        const sourceVal = board[dragSourceKey];
+        const targetVal = board[targetKey];
 
         if (targetVal === sourceVal && targetVal < MAX_LEVEL) {
           targetCell.classList.add('target-merge');
@@ -1461,18 +1428,16 @@
       if (currentHoverKey !== null && currentHoverKey !== dragSourceKey) {
         const from = dragSourceKey;
         const to = currentHoverKey;
-        const sourceVal = getItemValByKey(from);
-        const targetVal = getItemValByKey(to);
+        const sourceVal = board[from];
+        const targetVal = board[to];
 
         if (sourceVal === targetVal && sourceVal < MAX_LEVEL) {
           const nextLevel = sourceVal + 1;
-          setItemValByKey(from, null);
-          setItemValByKey(to, nextLevel);
+          board[from] = null;
+          board[to] = nextLevel;
 
-          if (to !== 'warehouse') {
-            animatedIndex = parseInt(to, 10);
-            animationType = 'anim-merge';
-          }
+          animatedIndex = to;
+          animationType = 'anim-merge';
 
           playBubbleSound(nextLevel);
           addScore(nextLevel);
@@ -1498,8 +1463,8 @@
           }
         } 
         else if (targetVal === null) {
-          setItemValByKey(to, sourceVal);
-          setItemValByKey(from, null);
+          board[to] = sourceVal;
+          board[from] = null;
           triggerHaptic('impact');
         }
       }
@@ -1511,9 +1476,8 @@
     }
 
     gridEl.addEventListener('pointerdown', onPointerDownUnified);
-    warehouseSlotEl.addEventListener('pointerdown', onPointerDownUnified);
 
-    // ---------------- РАБОТА С БАЗОЙ ДАННЫХ (SUPABASE) ----------------
+    // ---------------- РАБОТА С БАЗОЙ ДАННЫХ ----------------
     async function saveScoreToCloud(scoreToSend) {
       if (scoreToSend <= 0) return;
       const myKey = getMyPlayerKey();
@@ -1608,7 +1572,7 @@
       });
     }
 
-    // ---------------- НАЖАТИЯ НА КНОПКИ (УНИВЕРСАЛЬНЫЙ CLICK) ----------------
+    // ---------------- КНОПКИ И УПРАВЛЕНИЕ ----------------
     btnMenuLeaderboard.addEventListener('click', () => openLeaderboard());
     btnLeaderboard.addEventListener('click', () => { if (!isGameStarted) openLeaderboard(); });
     btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.style.display = 'none'; });
@@ -1631,11 +1595,10 @@
       nicknameInput.value = getPlayerNickname();
     }
 
-    // Кнопка «Построить»
     btnSpawn.addEventListener('click', () => {
       initAudio();
       if (isGameOver) return;
-      if (!isGameStarted) startGameSession(); // Автостарт если нажали строить
+      if (!isGameStarted) startGameSession();
 
       if (spawnTile()) {
         spawnTimer = 0;
@@ -1646,10 +1609,38 @@
       }
     });
 
-    // Кнопка «В меню» (без зависающего confirm)
-    btnReset.addEventListener('click', () => {
+    // Нативное подтверждение выхода в Telegram:
+    function handleExitRequest() {
       initAudio();
-      showStartMenu();
+      if (!isGameStarted || isGameOver) {
+        showStartMenu();
+        return;
+      }
+
+      const confirmText = "Вы уверены, что хотите выйти в меню? Текущий раунд будет завершён.";
+
+      // Если запущено в Telegram — вызываем официальное нативное окно:
+      if (window.Telegram?.WebApp?.showConfirm) {
+        window.Telegram.WebApp.showConfirm(confirmText, (confirmed) => {
+          if (confirmed) {
+            initGame();
+          }
+        });
+      } else {
+        // Резервное окно для браузера
+        fallbackConfirmModal.style.display = 'flex';
+      }
+    }
+
+    btnReset.addEventListener('click', handleExitRequest);
+
+    btnConfirmYes.addEventListener('click', () => {
+      fallbackConfirmModal.style.display = 'none';
+      initGame();
+    });
+
+    btnConfirmNo.addEventListener('click', () => {
+      fallbackConfirmModal.style.display = 'none';
     });
 
     btnWinRestart.addEventListener('click', () => { initAudio(); initGame(); });
@@ -1661,7 +1652,6 @@
     // ---------------- ИГРОВОЙ ЦИКЛ ----------------
     function initGame() {
       board = Array(GRID_SIZE * GRID_SIZE).fill(null);
-      warehouseItem = null;
       score = 0;
       isGameOver = false;
       spawnTimer = 0;
@@ -1676,6 +1666,7 @@
       winModal.style.display = 'none';
       loseModal.style.display = 'none';
       leaderboardModal.style.display = 'none';
+      fallbackConfirmModal.style.display = 'none';
       warningTextEl.style.display = 'none';
       timerBarEl.classList.remove('danger');
 
