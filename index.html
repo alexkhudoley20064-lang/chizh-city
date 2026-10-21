@@ -113,6 +113,7 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      touch-action: manipulation;
     }
 
     .instructions {
@@ -543,6 +544,9 @@
       font-weight: 800;
       outline: none;
       transition: border-color 0.2s ease;
+      user-select: text !important;
+      -webkit-user-select: text !important;
+      touch-action: auto !important;
     }
 
     .nickname-input:focus {
@@ -767,7 +771,7 @@
     </div>
   </div>
 
-  <!-- Стартовое меню -->
+  <!-- Меню старта -->
   <div class="modal-overlay" id="startModal" style="display: flex;">
     <div class="modal-card">
       <h2 style="font-size: 1.6rem; color: var(--primary); margin-bottom: 4px;">ChizhCity 🏙️</h2>
@@ -862,8 +866,6 @@
 
   <script>
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
-
-    // ---------------- КЛЮЧИ SUPABASE ----------------
     const SUPABASE_URL = "https://jrpbebupjrrspjfmbzzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpycGJlYnVwanJyc3BqZm1ienp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDM2MjgsImV4cCI6MjEwODExOTYyOH0.wD14zO0qyHmuP3YcrAqu_2GREzSkIc8rpzrUYXvopfM";
 
@@ -888,7 +890,7 @@
       } catch (e) {}
     }
 
-    // ---------------- ЗВУКИ ----------------
+    // ---------------- ЗВУКОВОЙ ДВИЖОК ----------------
     let audioCtx = null;
     let masterGain = null;
     let compressor = null;
@@ -1017,8 +1019,7 @@
     }
 
     const btnSound = document.getElementById('btnSound');
-    btnSound.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
+    btnSound.addEventListener('click', (e) => {
       initAudio();
       isMuted = !isMuted;
       btnSound.textContent = isMuted ? '🔇' : '🔊';
@@ -1032,7 +1033,7 @@
       }
     } catch(e) {}
 
-    window.addEventListener('pointerdown', () => initAudio(), { once: true });
+    window.addEventListener('click', () => initAudio(), { once: true });
 
     // ---------------- КОНФЕТТИ ----------------
     const canvas = document.getElementById('confettiCanvas');
@@ -1372,7 +1373,7 @@
       animationType = null;
     }
 
-    // ---------------- DRAG & DROP ----------------
+    // ---------------- DRAG & DROP НА СЕТКЕ ----------------
     function getItemValByKey(key) {
       if (key === 'warehouse') return warehouseItem;
       return board[parseInt(key, 10)];
@@ -1384,8 +1385,10 @@
     }
 
     function onPointerDownUnified(e) {
-      if (!isGameStarted || isGameOver) return;
+      if (isGameOver) return;
+      if (!isGameStarted) startGameSession(); // Автостарт при касании фишки
       initAudio();
+
       const cell = e.target.closest('.cell');
       if (!cell) return;
 
@@ -1482,7 +1485,6 @@
             triggerHaptic('impact');
           }
 
-          // ПОБЕДА
           if (nextLevel === MAX_LEVEL) {
             isGameOver = true;
             triggerHaptic('success');
@@ -1567,15 +1569,12 @@
       const myNick = getPlayerNickname();
       const currentBest = Math.max(score, highScore);
 
-      // Сохраняем актуальный рекорд перед открытием
       if (currentBest > 0) {
         await saveScoreToCloud(currentBest);
       }
 
-      // Запрашиваем реальный топ из базы
       let list = await fetchLeaderboardFromCloud();
 
-      // Если база недоступна или пуста — показываем резервный список
       if (!list || list.length === 0) {
         list = [
           { player_key: "bot_1", nickname: "Владимир_носков", score: 28400 },
@@ -1609,24 +1608,11 @@
       });
     }
 
-    btnMenuLeaderboard.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      openLeaderboard();
-    });
+    // ---------------- НАЖАТИЯ НА КНОПКИ (УНИВЕРСАЛЬНЫЙ CLICK) ----------------
+    btnMenuLeaderboard.addEventListener('click', () => openLeaderboard());
+    btnLeaderboard.addEventListener('click', () => { if (!isGameStarted) openLeaderboard(); });
+    btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.style.display = 'none'; });
 
-    btnLeaderboard.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      if (!isGameStarted) {
-        openLeaderboard();
-      }
-    });
-
-    btnCloseLeaderboard.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      leaderboardModal.style.display = 'none';
-    });
-
-    // ---------------- СТАРТ ИГРЫ ----------------
     function startGameSession() {
       initAudio();
       setPlayerNickname(nicknameInput.value);
@@ -1636,10 +1622,7 @@
       lastTimestamp = performance.now();
     }
 
-    btnStartGame.addEventListener('pointerdown', (e) => {
-      e.preventDefault();
-      startGameSession();
-    });
+    btnStartGame.addEventListener('click', () => startGameSession());
 
     function showStartMenu() {
       isGameStarted = false;
@@ -1648,6 +1631,34 @@
       nicknameInput.value = getPlayerNickname();
     }
 
+    // Кнопка «Построить»
+    btnSpawn.addEventListener('click', () => {
+      initAudio();
+      if (isGameOver) return;
+      if (!isGameStarted) startGameSession(); // Автостарт если нажали строить
+
+      if (spawnTile()) {
+        spawnTimer = 0;
+        triggerHaptic('impact');
+        render();
+      } else {
+        triggerHaptic('error');
+      }
+    });
+
+    // Кнопка «В меню» (без зависающего confirm)
+    btnReset.addEventListener('click', () => {
+      initAudio();
+      showStartMenu();
+    });
+
+    btnWinRestart.addEventListener('click', () => { initAudio(); initGame(); });
+    btnLoseRestart.addEventListener('click', () => { initAudio(); initGame(); });
+
+    btnWinShare.addEventListener('click', () => shareScore());
+    btnLoseShare.addEventListener('click', () => shareScore());
+
+    // ---------------- ИГРОВОЙ ЦИКЛ ----------------
     function initGame() {
       board = Array(GRID_SIZE * GRID_SIZE).fill(null);
       warehouseItem = null;
@@ -1722,3 +1733,17 @@
       const text = encodeURIComponent(
         `🏙️ Мэр ${myName} построил ЧижСкай и набрал ${score.toLocaleString()} очков в ChizhCity! 🎮 Сможешь побить мой рекорд?`
       );
+      const shareUrl = `https://t.me/share/url?text=${text}`;
+
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(shareUrl);
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    }
+
+    initGame();
+    requestAnimationFrame(gameLoop);
+  </script>
+</body>
+</html>
