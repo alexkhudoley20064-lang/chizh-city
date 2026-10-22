@@ -315,7 +315,6 @@
       pointer-events: none;
     }
 
-    /* Панель кнопок без склада */
     .controls-panel {
       display: flex;
       gap: 10px;
@@ -441,7 +440,6 @@
       to { transform: translateY(-4px) scale(1.1); }
     }
 
-    /* Модальные окна */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -728,7 +726,6 @@
 
     <div class="grid" id="grid"></div>
 
-    <!-- Панель кнопок (без склада) -->
     <div class="controls-panel">
       <button class="btn-spawn" id="btnSpawn">Построить 🏗️</button>
       <button class="btn-restart" id="btnReset">🔄 В меню</button>
@@ -762,7 +759,8 @@
       </div>
 
       <button class="btn-win-restart" id="btnStartGame" style="margin-bottom: 8px;">🚀 Начать игру</button>
-      <button class="btn-restart" id="btnMenuLeaderboard" style="width: 100%; height: 38px;">🏆 Таблица лидеров</button>
+      <button class="btn-restart" id="btnMenuLeaderboard" style="width: 100%; height: 40px; margin-bottom: 8px;">🏆 Таблица лидеров</button>
+      <button class="btn-restart" id="btnFeedback" style="width: 100%; height: 40px; background: #0c1b75; border-color: rgba(252, 223, 37, 0.4); color: var(--primary);">Оставить отзыв 🔥</button>
     </div>
   </div>
 
@@ -846,6 +844,10 @@
     const CHIZHIK_SKY_IMG_URL = "https://i.ibb.co/nN4Wz6xx/584-A990-E-41-A8-4-ECF-8-D16-976-F7-B674919.png";
     const SUPABASE_URL = "https://jrpbebupjrrspjfmbzzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpycGJlYnVwanJyc3BqZm1ienp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDM2MjgsImV4cCI6MjEwODExOTYyOH0.wD14zO0qyHmuP3YcrAqu_2GREzSkIc8rpzrUYXvopfM";
+
+    // Ссылка на вашего бота
+    const BOT_USERNAME = "ChizhikcityGameBot";
+    const FEEDBACK_TELEGRAM_LINK = `https://t.me/${BOT_USERNAME}?start=feedback`;
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -1169,6 +1171,7 @@
     const startModal = document.getElementById('startModal');
     const btnStartGame = document.getElementById('btnStartGame');
     const btnMenuLeaderboard = document.getElementById('btnMenuLeaderboard');
+    const btnFeedback = document.getElementById('btnFeedback');
     const nicknameInput = document.getElementById('nicknameInput');
 
     const btnLeaderboard = document.getElementById('btnLeaderboard');
@@ -1577,6 +1580,16 @@
     btnLeaderboard.addEventListener('click', () => { if (!isGameStarted) openLeaderboard(); });
     btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.style.display = 'none'; });
 
+    btnFeedback.addEventListener('click', () => {
+      initAudio();
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(FEEDBACK_TELEGRAM_LINK);
+        window.Telegram.WebApp.close();
+      } else {
+        window.open(FEEDBACK_TELEGRAM_LINK, '_blank');
+      }
+    });
+
     function startGameSession() {
       initAudio();
       setPlayerNickname(nicknameInput.value);
@@ -1609,7 +1622,6 @@
       }
     });
 
-    // Нативное подтверждение выхода в Telegram:
     function handleExitRequest() {
       initAudio();
       if (!isGameStarted || isGameOver) {
@@ -1619,7 +1631,6 @@
 
       const confirmText = "Вы уверены, что хотите выйти в меню? Текущий раунд будет завершён.";
 
-      // Если запущено в Telegram — вызываем официальное нативное окно:
       if (window.Telegram?.WebApp?.showConfirm) {
         window.Telegram.WebApp.showConfirm(confirmText, (confirmed) => {
           if (confirmed) {
@@ -1627,7 +1638,6 @@
           }
         });
       } else {
-        // Резервное окно для браузера
         fallbackConfirmModal.style.display = 'flex';
       }
     }
@@ -1645,6 +1655,20 @@
 
     btnWinRestart.addEventListener('click', () => { initAudio(); initGame(); });
     btnLoseRestart.addEventListener('click', () => { initAudio(); initGame(); });
+
+    // ---------------- ПОДЕЛИТЬСЯ РЕЗУЛЬТАТОМ В TELEGRAM ----------------
+    function shareScore() {
+      const botLink = `https://t.me/${BOT_USERNAME}`;
+      const shareText = `🏙️ Я набрал ${score.toLocaleString()} очков в ChizhCity! Сыграй со мной и попробуй побить мой рекорд 👇`;
+      // Передаём url и text, чтобы Telegram открыл нативное окно пересылки друзьям:
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${encodeURIComponent(shareText)}`;
+
+      if (window.Telegram?.WebApp?.openTelegramLink) {
+        window.Telegram.WebApp.openTelegramLink(shareUrl);
+      } else {
+        window.open(shareUrl, '_blank');
+      }
+    }
 
     btnWinShare.addEventListener('click', () => shareScore());
     btnLoseShare.addEventListener('click', () => shareScore());
@@ -1717,20 +1741,6 @@
       }
 
       requestAnimationFrame(gameLoop);
-    }
-
-    function shareScore() {
-      const myName = getPlayerNickname();
-      const text = encodeURIComponent(
-        `🏙️ Мэр ${myName} построил ЧижСкай и набрал ${score.toLocaleString()} очков в ChizhCity! 🎮 Сможешь побить мой рекорд?`
-      );
-      const shareUrl = `https://t.me/share/url?text=${text}`;
-
-      if (window.Telegram?.WebApp?.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(shareUrl);
-      } else {
-        window.open(shareUrl, '_blank');
-      }
     }
 
     initGame();
