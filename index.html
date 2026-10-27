@@ -440,6 +440,7 @@
       to { transform: translateY(-4px) scale(1.1); }
     }
 
+    /* Модальные окна */
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -759,8 +760,7 @@
       </div>
 
       <button class="btn-win-restart" id="btnStartGame" style="margin-bottom: 8px;">🚀 Начать игру</button>
-      <button class="btn-restart" id="btnMenuLeaderboard" style="width: 100%; height: 40px; margin-bottom: 8px;">🏆 Таблица лидеров</button>
-      <button class="btn-restart" id="btnFeedback" style="width: 100%; height: 40px; background: #0c1b75; border-color: rgba(252, 223, 37, 0.4); color: var(--primary);">Оставить отзыв 🔥</button>
+      <button class="btn-restart" id="btnMenuLeaderboard" style="width: 100%; height: 40px;">🏆 Таблица лидеров</button>
     </div>
   </div>
 
@@ -845,9 +845,8 @@
     const SUPABASE_URL = "https://jrpbebupjrrspjfmbzzt.supabase.co";
     const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpycGJlYnVwanJyc3BqZm1ienp0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI1NDM2MjgsImV4cCI6MjEwODExOTYyOH0.wD14zO0qyHmuP3YcrAqu_2GREzSkIc8rpzrUYXvopfM";
 
-    // Ссылка на вашего бота
-    const BOT_USERNAME = "ChizhikcityGameBot";
-    const FEEDBACK_TELEGRAM_LINK = `https://t.me/${BOT_USERNAME}?start=feedback`;
+    // Имя бота для пересылки
+    const BOT_USERNAME = "lekkzhubBot";
 
     if (window.Telegram && window.Telegram.WebApp) {
       window.Telegram.WebApp.ready();
@@ -1171,7 +1170,6 @@
     const startModal = document.getElementById('startModal');
     const btnStartGame = document.getElementById('btnStartGame');
     const btnMenuLeaderboard = document.getElementById('btnMenuLeaderboard');
-    const btnFeedback = document.getElementById('btnFeedback');
     const nicknameInput = document.getElementById('nicknameInput');
 
     const btnLeaderboard = document.getElementById('btnLeaderboard');
@@ -1580,16 +1578,6 @@
     btnLeaderboard.addEventListener('click', () => { if (!isGameStarted) openLeaderboard(); });
     btnCloseLeaderboard.addEventListener('click', () => { leaderboardModal.style.display = 'none'; });
 
-    btnFeedback.addEventListener('click', () => {
-      initAudio();
-      if (window.Telegram?.WebApp?.openTelegramLink) {
-        window.Telegram.WebApp.openTelegramLink(FEEDBACK_TELEGRAM_LINK);
-        window.Telegram.WebApp.close();
-      } else {
-        window.open(FEEDBACK_TELEGRAM_LINK, '_blank');
-      }
-    });
-
     function startGameSession() {
       initAudio();
       setPlayerNickname(nicknameInput.value);
@@ -1660,7 +1648,6 @@
     function shareScore() {
       const botLink = `https://t.me/${BOT_USERNAME}`;
       const shareText = `🏙️ Я набрал ${score.toLocaleString()} очков в ChizhCity! Сыграй со мной и попробуй побить мой рекорд 👇`;
-      // Передаём url и text, чтобы Telegram открыл нативное окно пересылки друзьям:
       const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(botLink)}&text=${encodeURIComponent(shareText)}`;
 
       if (window.Telegram?.WebApp?.openTelegramLink) {
